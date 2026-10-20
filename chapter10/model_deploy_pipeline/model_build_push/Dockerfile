@@ -1,9 +1,6 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 WORKDIR /microservice
-
-# Install system dependencies for C-extensions
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 
 COPY base_requirements.txt /microservice/
 RUN pip install --no-cache-dir -r base_requirements.txt
