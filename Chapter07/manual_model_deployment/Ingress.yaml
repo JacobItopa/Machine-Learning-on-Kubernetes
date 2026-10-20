@@ -6,17 +6,17 @@ metadata:
     deployment_version: v1
   labels:
     app: seldon
-  name: model-test
+  name: model-1-scikit
 
 spec:
   ingressClassName: nginx
   rules:
-  - host: <Host Name like model-test.192.168.61.72.nip.io>
+  - host: model-1-scikit.192.168.49.2.nip.io
     http:
       paths:
       - backend:
           service:
-            name: model-test
+            name: model-1-scikit
             port:
               number: 8000
         path: /

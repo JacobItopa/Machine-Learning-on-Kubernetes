@@ -47,16 +47,11 @@ spec:
           imagePullPolicy: IfNotPresent
 
         - name: mlflow-deployment
-          image: quay.io/ml-aml-workshop/mlflow:0.0.2
+          image: ghcr.io/mlflow/mlflow:v2.11.3
           imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
           args:
-            - mlflow
-            - server
-            - '--host=0.0.0.0'
-            - '--port=5500'
-            - '--backend-store-uri=postgresql://postgres:admin@mlflow-db:5432/postgres'
-            - '--default-artifact-root=s3://mlflow/'
-            - '--workers=2'
+            - pip install psycopg2-binary && mlflow server --host=0.0.0.0 --port=5500 --backend-store-uri=postgresql://postgres:admin@mlflow-db:5432/postgres --default-artifact-root=s3://mlflow/ --workers=2
           env:
             - name: MLFLOW_S3_ENDPOINT_URL
               value: http://minio-ml-workshop:9000/

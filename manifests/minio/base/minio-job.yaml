@@ -28,12 +28,44 @@ spec:
           name: promconfig
       containers:
         - name: mc
-          image: minio/mc:latest
+          # minio/mc images were removed from Docker Hub (2025); aws-cli is used instead.
+          image: docker.io/amazon/aws-cli:2.17.0
           imagePullPolicy: IfNotPresent
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: minio
+            - name: AWS_SECRET_ACCESS_KEY
+              value: minio123
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_REQUEST_CHECKSUM_CALCULATION
+              value: when_required
+            - name: AWS_RESPONSE_CHECKSUM_VALIDATION
+              value: when_required
           command:
             - /bin/sh
             - -c
-            - "mc --config-dir=/config config host add velero http://minio-ml-workshop:9000 minio minio123 && mc --config-dir=/config mb --ignore-existing velero/data/ && mc --config-dir=/config mb --ignore-existing velero/model-stats/tensordata/ && mc --config-dir=/config mb --ignore-existing velero/models/ && mc --config-dir=/config cp /tmp/models.config velero/models && mc --config-dir=/config cp /tmp/prometheus_config.config velero/models && mc --config-dir=/config mb --ignore-existing velero/rawdata && mc --config-dir=/config policy set public velero/rawdata &&  mc --config-dir=/config mb --ignore-existing velero/mlflow && mc --config-dir=/config policy set public velero/mlflow &&  mc --config-dir=/config mb --ignore-existing velero/airflow && mc --config-dir=/config policy set public velero/airflow"
+            - |
+              set -e
+              EP=http://minio-ml-workshop:9000
+              S3="aws --endpoint-url $EP s3"
+              until $S3 ls >/dev/null 2>&1; do echo "waiting for minio..."; sleep 5; done
+              for b in data model-stats models rawdata mlflow airflow; do
+                $S3 mb s3://$b 2>/dev/null || echo "bucket $b already exists"
+              done
+              aws --endpoint-url $EP s3api put-object --bucket model-stats --key tensordata/
+              $S3 cp /tmp/models.config s3://models/models.config
+              $S3 cp /tmp/prometheus_config.config s3://models/prometheus_config.config
+              for b in rawdata mlflow airflow; do
+                cat > /tmp/policy-$b.json <<POLICY
+              {"Version":"2012-10-17","Statement":[
+                {"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::$b"]},
+                {"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListMultipartUploadParts","s3:AbortMultipartUpload"],"Resource":["arn:aws:s3:::$b/*"]}
+              ]}
+              POLICY
+                aws --endpoint-url $EP s3api put-bucket-policy --bucket $b --policy file:///tmp/policy-$b.json
+              done
+              echo "MinIO bootstrap complete"; $S3 ls
           volumeMounts:
             - name: config
               mountPath: "/config"

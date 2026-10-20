@@ -61,8 +61,8 @@ def download_artifacts():
 
     print(model)
 
-    run_id = model._latest_version[0].run_id
-    source = model._latest_version[0].source
+    run_id = model.latest_versions[0].run_id
+    source = model.latest_versions[0].source
     experiment_id = "1" # to be calculated from the source which is source='s3://mlflow/1/bf721e5641394ed6866baf20131fca20/artifacts/model'
 
     print("initializing connection to s3 server...")
@@ -71,8 +71,8 @@ def download_artifacts():
     #     artifact_location = mlflow.get_experiment_by_name('rossdemo').artifact_location
     #     print("downloading artifacts from s3 bucket " + artifact_location)
 
-    data_file_model = minioClient.fget_object("mlflow", f"/{experiment_id}/{run_id}/artifacts/model/model.pkl", "model.pkl")
-    data_file_requirements = minioClient.fget_object("mlflow", f"/{experiment_id}/{run_id}/artifacts/model/requirements.txt", "requirements.txt")
+    data_file_model = minioClient.fget_object("mlflow", f"{experiment_id}/{run_id}/artifacts/model/model.pkl", "model.pkl")
+    data_file_requirements = minioClient.fget_object("mlflow", f"{experiment_id}/{run_id}/artifacts/model/requirements.txt", "requirements.txt")
 
     #Using boto3 Download the files from mlflow, the file path is in the model meta
     #write the files to the file system

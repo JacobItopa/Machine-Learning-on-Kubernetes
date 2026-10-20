@@ -85,7 +85,7 @@ spec:
             - name: dags-data
               mountPath: /tmp/git
           terminationMessagePolicy: File
-          image: 'k8s.gcr.io/git-sync/git-sync:v3.2.2'
+          image: 'registry.k8s.io/git-sync/git-sync:v3.2.2'
         - name: airflow-scheduler
           image: quay.io/ml-on-k8s/airflow:2.0.0.scheduler
           imagePullPolicy: "Always"
@@ -234,7 +234,7 @@ spec:
             - name: dags-data
               mountPath: /tmp/git
           terminationMessagePolicy: File
-          image: 'k8s.gcr.io/git-sync/git-sync:v3.2.2'
+          image: 'registry.k8s.io/git-sync/git-sync:v3.2.2'
         - name: airflow-web
           image: quay.io/ml-on-k8s/airflow:2.1.7.web.keycloak
           imagePullPolicy: "Always"
@@ -315,6 +315,8 @@ spec:
               value: https://$(KEYCLOAK_URL)/auth/realms/master/protocol/openid-connect/token
             - name: OAUTH_AUTHORIZE_URL
               value: https://$(KEYCLOAK_URL)/auth/realms/master/protocol/openid-connect/auth
+            - name: OAUTHLIB_INSECURE_TRANSPORT
+              value: "1"
             - name: CLIENT_ID
               value: 'aflow'
             - name: CLIENT_SECRET
@@ -675,7 +677,7 @@ spec:
             - name: dags-data
               mountPath: /tmp/git
           terminationMessagePolicy: File
-          image: 'k8s.gcr.io/git-sync/git-sync:v3.2.2'
+          image: 'registry.k8s.io/git-sync/git-sync:v3.2.2'
         - name: airflow-worker
           image: quay.io/ml-on-k8s/airflow:2.0.0.worker
           imagePullPolicy: "Always"

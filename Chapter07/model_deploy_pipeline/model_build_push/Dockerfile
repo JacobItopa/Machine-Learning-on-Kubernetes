@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/python-38:1-77
+FROM registry.access.redhat.com/ubi9/python-311:latest
 
 WORKDIR /microservice
 COPY base_requirements.txt /microservice/

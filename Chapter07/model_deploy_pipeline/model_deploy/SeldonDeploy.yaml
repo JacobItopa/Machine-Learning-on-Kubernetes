@@ -3,19 +3,18 @@ kind: SeldonDeployment
 metadata:
   labels:
     app: seldon
-  name: model-{{  experiment_id }}
+  name: model-1
 spec:
   annotations:
-    project_name: {{  model_name }}
-    deployment_version: "{{  experiment_id }}"
-  #     seldon.io/engine-separate-pod: "true"
-  name: {{  model_name }}-specs
+    project_name: scikit
+    deployment_version: "1"
+  name: scikit-specs
   predictors:
       - componentSpecs:
         - spec:
             containers:
-              - image: {{ model_coordinates }}
-                imagePullPolicy: Always
+              - image: y2jay1/seldon-model:v1.0
+                imagePullPolicy: IfNotPresent
                 name: predictor
                 env:
                   - name: MODEL_NAME
@@ -37,21 +36,21 @@ spec:
                 type: Resource
             minReplicas: 1
         graph:
-          children:
+          children: []
           name: predictor
           type: MODEL
           endpoint:
             type: REST
             service_host: localhost
             service_port: 9000
-          # logger:
-          #   url: http://logger/
-          #   mode: all
-        name: {{ model_name }}-predictor
+          logger:
+            url: http://logger/
+            mode: all
+        name: scikit-predictor
         annotations:
-          predictor_version: "{{  experiment_id }}"
+          predictor_version: "1"
           team: opendatahub
-          seldon.io/svc-name: model-{{  experiment_id }}-{{ model_name }}
+          seldon.io/svc-name: model-1-scikit
         labels:
           team: opendatahub
           version: v1

@@ -1,4 +1,4 @@
-FROM quay.io/thoth-station/s2i-lab-elyra:v0.1.1
+FROM jupyter/scipy-notebook:latest
 
 # copy the requirements.txt file whoch contains all the deps
 COPY requirements.txt requirements.txt
