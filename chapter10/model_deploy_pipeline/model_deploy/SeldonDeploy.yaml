@@ -28,6 +28,13 @@ spec:
                     value: "6007"
                   - name: HTTP_PORT
                     value: "9000"
+                resources:
+                  requests:
+                    memory: "256Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "1000m"
               - image: {{ model_coordinates }}
                 imagePullPolicy: Always
                 name: predictor
@@ -42,6 +49,13 @@ spec:
                     value: "6008"
                   - name: HTTP_PORT
                     value: "9001"
+                resources:
+                  requests:
+                    memory: "256Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "1000m"
           hpaSpec:
             maxReplicas: 2
             metrics:

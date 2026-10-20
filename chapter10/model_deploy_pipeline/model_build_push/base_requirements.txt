@@ -1,5 +1,5 @@
-seldon-core
+seldon-core>=1.15.0
 joblib
-Werkzeug==1.0.1
-category_encoders==2.2.2
-#dill
+pandas
+scikit-learn
+category_encoders

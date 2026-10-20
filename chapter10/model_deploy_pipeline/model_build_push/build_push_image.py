@@ -80,21 +80,33 @@ def download_artifacts():
     #     artifact_location = mlflow.get_experiment_by_name('rossdemo').artifact_location
     #     print("downloading artifacts from s3 bucket " + artifact_location)
 
-    data_file_model = minioClient.fget_object("mlflow", f"/{experiment_id}/{run_id}/artifacts/model/model.pkl", "model.pkl")
-    data_file_requirements = minioClient.fget_object("mlflow", f"/{experiment_id}/{run_id}/artifacts/model/requirements.txt", "requirements.txt")
+    # Strip leading slashes for standard S3/MinIO key compatibility
+    prefix_clean = f"{experiment_id}/{run_id}".lstrip("/")
+    model_path = f"{prefix_clean}/artifacts/model/model.pkl"
+    try:
+        minioClient.fget_object("mlflow", model_path, "model.pkl")
+    except Exception as e:
+        print(f"Retrying with leading slash: {e}")
+        minioClient.fget_object("mlflow", f"/{model_path}", "model.pkl")
+
+    req_path = f"{prefix_clean}/artifacts/model/requirements.txt"
+    try:
+        minioClient.fget_object("mlflow", req_path, "requirements.txt")
+    except Exception as e:
+        print(f"Optional requirements.txt not found: {e}")
     
-    #download all the pkl files from this location
-    pkl_objects = minioClient.list_objects("mlflow", recursive=True, prefix=f"/{experiment_id}/{run_id}")
+    # Download all pkl files from this location (including encoders)
+    pkl_objects = list(minioClient.list_objects("mlflow", recursive=True, prefix=prefix_clean))
+    if not pkl_objects:
+        pkl_objects = list(minioClient.list_objects("mlflow", recursive=True, prefix=f"/{prefix_clean}"))
+
     for pkl_object in pkl_objects:
-        print(pkl_object)
         pkl_object_name = pkl_object.object_name
-        if pkl_object_name.endswith('pkl'):
+        if pkl_object_name.endswith('.pkl'):
+            print(f"Downloading artifact: {pkl_object_name}")
             minioClient.fget_object('mlflow', pkl_object_name, pkl_object_name.split("/")[-1])
       
-    #Using boto3 Download the files from mlflow, the file path is in the model meta
-    #write the files to the file system
-    print("download successful")
-
+    print("Download successful")
     return run_id
 
 def build_push_image():
