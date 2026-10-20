@@ -8,5 +8,6 @@ spec:
   installPlanApproval: Manual
   name: opendatahub-operator
   source: community-operators-redhat
-  sourceNamespace: olm
+  sourceNamespace: olm    
   startingCSV: opendatahub-operator.v1.1.1
+
