@@ -28,14 +28,20 @@ model_name = os.environ["MODEL_NAME"]
 model_version = os.environ["MODEL_VERSION"]
 build_name = f"seldon-model-{model_name}-v{model_version}"
 
-auth_encoded = string.Template("$CONTAINER_REGISTRY_USER:$CONTAINER_REGISTRY_PASSWORD").substitute(os.environ)
-os.environ["CONTAINER_REGISTRY_CREDS"] = base64.b64encode(auth_encoded.encode("ascii")).decode("ascii")
+auth_encoded = f"{os.environ['CONTAINER_REGISTRY_USER']}:{os.environ['CONTAINER_REGISTRY_PASSWORD']}"
+creds = base64.b64encode(auth_encoded.encode("ascii")).decode("ascii")
 
-docker_auth = string.Template('{"auths":{"$CONTAINER_REGISTRY":{"auth":"$CONTAINER_REGISTRY_CREDS"}}}').substitute(os.environ)
-print(docker_auth)
-f = open("/kaniko/.docker/config.json", "w")
-f.write(docker_auth)
-f.close()
+reg = os.environ.get("CONTAINER_REGISTRY", "https://index.docker.io/v1/")
+auth_dict = {
+    reg: {"auth": creds},
+    "https://index.docker.io/v1/": {"auth": creds},
+    "index.docker.io": {"auth": creds},
+    "docker.io": {"auth": creds},
+}
+docker_auth = json.dumps({"auths": auth_dict})
+os.makedirs("/kaniko/.docker", exist_ok=True)
+with open("/kaniko/.docker/config.json", "w") as f:
+    f.write(docker_auth)
 
 def get_s3_server():
     minioClient = Minio('minio-ml-workshop:9000',
@@ -176,17 +182,14 @@ def download_artifacts():
     return run_id
 
 def build_push_image():
-    container_location = string.Template("$CONTAINER_REGISTRY/$CONTAINER_DETAILS").substitute(os.environ)
-    
-    #For docker repo, do not include the registry domain name in container location
-    if os.environ["CONTAINER_REGISTRY"].find("docker.io") != -1:
-        container_location= os.environ["CONTAINER_DETAILS"]
-        
-    full_command = "/kaniko/executor --context=" + os.getcwd() + " --dockerfile=Dockerfile --verbosity=debug --cache=true --single-snapshot=true --destination=" + container_location
-    print(full_command)
-    process = subprocess.run(full_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(process.stdout)
-    print(process.stderr)
+    container_location = os.environ["CONTAINER_DETAILS"]
+    if os.environ.get("CONTAINER_REGISTRY") and os.environ["CONTAINER_REGISTRY"].find("docker.io") == -1:
+        container_location = f"{os.environ['CONTAINER_REGISTRY']}/{container_location}"
+
+    dockerfile_path = os.path.join(os.getcwd(), "Dockerfile")
+    full_command = f"/kaniko/executor --context={os.getcwd()} --dockerfile={dockerfile_path} --verbosity=info --single-snapshot=true --destination={container_location}"
+    print(f"Running Kaniko: {full_command}")
+    subprocess.run(full_command, shell=True, check=True)
 
     # print(subprocess.check_output(['/kaniko/executor', '--context', '/workspace',  '--dockerfile', 'Dockerfile', '--destination', container_location]))
 
