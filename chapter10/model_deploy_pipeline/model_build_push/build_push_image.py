@@ -50,29 +50,61 @@ def init():
     mlflow.set_tracking_uri(HOST)
 
 
+def get_model_run_info(host, model_name, model_version):
+    import json
+    import urllib.request
+    import os
+
+    if os.environ.get("RUN_ID") and os.environ.get("EXPERIMENT_ID"):
+        return os.environ["RUN_ID"], os.environ["EXPERIMENT_ID"], f"s3://mlflow/{os.environ['EXPERIMENT_ID']}/{os.environ['RUN_ID']}/artifacts/model"
+
+    try:
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
+        model = client.get_registered_model(model_name)
+        for lv in model.latest_versions:
+            if str(lv.version) == str(model_version):
+                exp_id = lv.source.split("/")[3] if len(lv.source.split("/")) > 3 else "1"
+                return lv.run_id, exp_id, lv.source
+    except Exception as e:
+        print(f"MlflowClient failed ({e}), falling back to direct MLflow 2.0 REST API...")
+
+    endpoints = [
+        f"{host}/api/2.0/mlflow/model-versions/get?name={model_name}&version={model_version}",
+        f"{host}/api/2.0/mlflow/registered-models/get?name={model_name}",
+    ]
+
+    for ep in endpoints:
+        try:
+            req = urllib.request.Request(ep)
+            with urllib.request.urlopen(req) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if "model_version" in data:
+                    mv = data["model_version"]
+                    run_id = mv["run_id"]
+                    source = mv.get("source", "")
+                    exp_id = source.split("/")[3] if len(source.split("/")) > 3 else "1"
+                    print(f"Resolved from REST model_version: run_id={run_id}, experiment_id={exp_id}")
+                    return run_id, exp_id, source
+                elif "registered_model" in data:
+                    rm = data["registered_model"]
+                    for lv in rm.get("latest_versions", []):
+                        if str(lv.get("version")) == str(model_version):
+                            run_id = lv["run_id"]
+                            source = lv.get("source", "")
+                            exp_id = source.split("/")[3] if len(source.split("/")) > 3 else "1"
+                            print(f"Resolved from REST registered_model: run_id={run_id}, experiment_id={exp_id}")
+                            return run_id, exp_id, source
+        except Exception as err:
+            print(f"REST endpoint {ep} returned: {err}")
+
+    raise RuntimeError(f"Could not retrieve metadata for model '{model_name}' version '{model_version}' from {host}")
+
+
 def download_artifacts():
     print("retrieving model metadata from mlflow...")
-    # model = mlflow.pyfunc.load_model(
-    #     model_uri=f"models:/{model_name}/{model_version}"
-    # )
-    client = MlflowClient()
-
-    model = client.get_registered_model(model_name)
-
-    print(model)
-    
-    for latest_version in model.latest_versions:
-        if latest_version.version != model_version:
-            continue
-
-        run_id = latest_version.run_id
-        source = latest_version.source
-        experiment_id = latest_version.source.split("/")[3]
-        print(latest_version)    
-
-    # run_id = model._latest_version[0].run_id
-    # source = model._latest_version[0].source
-    # experiment_id = "1" # to be calculated from the source which is source='s3://mlflow/1/bf721e5641394ed6866baf20131fca20/artifacts/model'
+    run_id, experiment_id, source = get_model_run_info(HOST, model_name, model_version)
+    print(f"Found model metadata: run_id={run_id}, experiment_id={experiment_id}, source={source}")
 
     print("initializing connection to s3 server...")
     minioClient = get_s3_server()
