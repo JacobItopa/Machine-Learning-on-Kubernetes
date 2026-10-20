@@ -51,10 +51,10 @@ spec:
                     value: "9001"
                 resources:
                   requests:
-                    memory: "256Mi"
+                    memory: "512Mi"
                     cpu: "100m"
                   limits:
-                    memory: "1Gi"
+                    memory: "2500Mi"
                     cpu: "1000m"
           hpaSpec:
             maxReplicas: 2
